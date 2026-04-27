@@ -3,11 +3,6 @@ import type { Contact, Member, User } from '@prisma/client'
 
 export type UserBasic = Pick<User, 'id' | 'role'> & { contact: Contact }
 export type MemberWithContact = Member & { contact: Contact }
-export type ClassSlot = {
-	weekday: number
-	start: string
-	end: string
-}
 
 export type SnippetLike<Args extends unknown[] = unknown[]> =
 	| Snippet<Args>

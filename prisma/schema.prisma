@@ -201,6 +201,7 @@ model Meter {
   serialNumber String      @unique
   model        String?
   simNumber    String?
+  modbusUnitId Int?
   status       MeterStatus @default(offline)
   type         MeterType
 
@@ -225,20 +226,21 @@ enum MeterType {
   gas
 }
 
+// TimescaleDB hypertable partitioned by `timestamp`.
+// Toujours utiliser --create-only si une modification est faite sur Consumption
 model Consumption {
-  id           Int      @id @default(autoincrement())
-  meterId      Int
-  meter        Meter    @relation(fields: [meterId], references: [id], onDelete: Cascade)
-  timestamp    DateTime
-  indexValue   Decimal  @db.Decimal(18, 6)
-  instantPower Decimal? @db.Decimal(18, 6)
-  voltage      Decimal? @db.Decimal(18, 6)
-  current      Decimal? @db.Decimal(18, 6)
-  alertStatus  String?
+  id         Int      @default(autoincrement())
+  meterId    Int
+  meter      Meter    @relation(fields: [meterId], references: [id], onDelete: Cascade)
+  timestamp  DateTime
+  indexValue Decimal  @db.Decimal(18, 6)
+  /// [JsonConsumptionData]
+  data       Json
 
-  createdAt DateTime @default(now())
-
+  @@id([id, timestamp])
   @@index([meterId, timestamp])
+  @@index([timestamp])
+  @@map("consumption")
 }
 
 model Tariff {

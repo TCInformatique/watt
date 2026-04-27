@@ -1,7 +1,7 @@
 #!/bin/bash
 
 CONTAINER_NAME="db-dev-postgres"
-IMAGE="postgres:18-alpine"
+IMAGE="timescale/timescaledb:latest-pg17"
 NO_SECURE_PASS="dev-password"
 
 if [ "$(docker ps -q -f name=^/${CONTAINER_NAME}$)" ]; then

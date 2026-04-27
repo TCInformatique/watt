@@ -127,21 +127,19 @@ erDiagram
         string serialNumber UK
         string model
         string simNumber
+        int modbusUnitId
         MeterStatus status
         MeterType type
         datetime createdAt
         datetime updatedAt
     }
 
-    Consumption {
+    consumption {
         int id PK
         int meterId FK
         datetime timestamp
         decimal indexValue
-        decimal instantPower
-        decimal voltage
-        decimal current
-        string alertStatus
+        json data
         datetime createdAt
     }
 

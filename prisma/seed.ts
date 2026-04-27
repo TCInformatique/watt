@@ -1,9 +1,11 @@
 import { hash } from '@node-rs/argon2'
 import { fakerFR_CH as faker } from '@faker-js/faker'
 import dayjs from 'dayjs'
+import { PrismaPg } from '@prisma/adapter-pg'
 import { Prisma, PrismaClient } from '@prisma/client'
 
-const prisma = new PrismaClient()
+const adapter = new PrismaPg(process.env.DATABASE_URL!)
+const prisma = new PrismaClient({ adapter })
 
 async function seed() {
 	const email = 'jonas.voisard@gmail.com'
@@ -148,6 +150,7 @@ async function seed() {
 					serialNumber: faker.string.alphanumeric(12).toUpperCase(),
 					model: faker.helpers.arrayElement(['SmartMeter V2', 'EcoCount Pro', 'SIM-Watt 3000']),
 					simNumber: faker.string.numeric(15),
+					modbusUnitId: faker.number.int({ min: 1, max: 247 }),
 					status: faker.helpers.arrayElement(['online', 'offline', 'maintenance']),
 					type: faker.helpers.arrayElement(meterTypes)
 				}
@@ -206,30 +209,25 @@ async function seed() {
 			const timestamp = dayjs().subtract(d, 'day').toDate()
 			const daily = faker.number.float({ min: 1, max: 20, fractionDigits: 3 })
 			indexValue += daily
+			const consumptionPayload: Record<string, unknown> = {}
+			if (faker.helpers.maybe(() => true, { probability: 0.7 })) {
+				consumptionPayload.instantPower = faker.number.float({ min: 0.5, max: 10, fractionDigits: 3 })
+			}
+			if (faker.helpers.maybe(() => true, { probability: 0.5 })) {
+				consumptionPayload.voltage = faker.number.float({ min: 220, max: 240, fractionDigits: 1 })
+			}
+			if (faker.helpers.maybe(() => true, { probability: 0.5 })) {
+				consumptionPayload.current = faker.number.float({ min: 1, max: 30, fractionDigits: 2 })
+			}
+			if (faker.helpers.maybe(() => true, { probability: 0.05 })) {
+				consumptionPayload.alertStatus = faker.helpers.arrayElement(['low_signal', 'high_consumption'])
+			}
+
 			consumptionData.push({
 				meterId: meter.id,
 				timestamp,
 				indexValue,
-				instantPower:
-					faker.helpers.maybe(
-						() => faker.number.float({ min: 0.5, max: 10, fractionDigits: 3 }),
-						{ probability: 0.7 }
-					) ?? null,
-				voltage:
-					faker.helpers.maybe(
-						() => faker.number.float({ min: 220, max: 240, fractionDigits: 1 }),
-						{ probability: 0.5 }
-					) ?? null,
-				current:
-					faker.helpers.maybe(
-						() => faker.number.float({ min: 1, max: 30, fractionDigits: 2 }),
-						{ probability: 0.5 }
-					) ?? null,
-				alertStatus:
-					faker.helpers.maybe(
-						() => faker.helpers.arrayElement(['low_signal', 'high_consumption']),
-						{ probability: 0.05 }
-					) ?? null
+				data: consumptionPayload
 			})
 		}
 	}
