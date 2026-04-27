@@ -134,7 +134,7 @@ erDiagram
         datetime updatedAt
     }
 
-    consumption {
+    Consumption {
         int id PK
         int meterId FK
         datetime timestamp
