@@ -1,0 +1,35 @@
+@reference '../../app.css';
+
+.carta-input-wrapper {
+	font-family: inherit !important;
+}
+
+.carta-input {
+	caret-color: var(--color-base-content);
+	@apply text-sm pb-1 pt-2 pl-3 pr-10 text-base-content;
+}
+
+.carta-input ::placeholder {
+	@apply text-base-content opacity-40;
+}
+
+.carta-renderer,
+.carta-viewer {
+	@apply prose text-sm;
+}
+.carta-editor {
+	@apply px-1;
+}
+.carta-toolbar-left {
+	@apply tabs;
+}
+.carta-toolbar-left > button {
+	@apply tab;
+}
+.carta-toolbar-right > button {
+	@apply btn btn-square btn-ghost;
+}
+
+.carta-toolbar-left > button.carta-active {
+	@apply text-base-content;
+}

@@ -1,0 +1,149 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+generator json {
+  provider = "prisma-json-types-generator"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id           Int      @id @default(autoincrement())
+  email        String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+  role         UserRole
+  contactId    Int      @unique
+  contact      Contact  @relation(fields: [contactId], references: [id])
+
+  sessions Session[]
+}
+
+enum UserRole {
+  root
+  admin
+  basic
+}
+
+model Session {
+  id     String @id
+  userId Int
+  user   User   @relation(fields: [userId], references: [id])
+  orgId  Int?
+  org    Org?   @relation(fields: [orgId], references: [id])
+
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+}
+
+model Contact {
+  id Int @id @default(autoincrement())
+
+  user User?
+
+  // TODO: CONTACT PERMISSIONS SYSTEM
+  // orgId Int
+  // org Org @relation(fields: [orgId], references: [id])
+
+  firstName        String
+  lastName         String
+  email            String?
+  phone            String?
+  city             String?
+  zipCode          String?
+  street           String?
+  birthday         DateTime?
+  birthdayAsString String?
+  gender           ContactGender?
+
+  isInvitation Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  logs    Log[]
+  members Member[]
+
+  // TODO: this is important... I think
+  //@@unique([email, orgId])
+}
+
+enum ContactGender {
+  male
+  female
+  other
+}
+
+model Member {
+  id Int @id @default(autoincrement())
+
+  contactId Int
+  contact   Contact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+
+  orgId Int
+  org   Org @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  role MemberRole
+
+  logsRelated Log[]       @relation(name: "logMember")
+  logsCreated Log[]       @relation(name: "logCreatedBy")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([orgId, contactId])
+}
+
+enum MemberRole {
+  admin
+  manager
+  client
+}
+
+model Org {
+  id   Int    @id @default(autoincrement())
+  name String @unique
+
+  members             Member[]
+  logs                Log[]        @relation(name: "logOrg")
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  sessions  Session[]
+}
+
+
+model Log {
+  id Int @id @default(autoincrement())
+
+  type LogType
+  /// [JsonLogData]
+  data Json
+
+  orgId       Int
+  org         Org        @relation(fields: [orgId], references: [id], name: "logOrg")
+  contactId   Int?
+  contact     Contact?   @relation(fields: [contactId], references: [id])
+  memberId    Int?
+  member      Member?    @relation(fields: [memberId], references: [id], name: "logMember", onDelete: SetNull)
+
+  createdById Int?
+  createdBy   Member?    @relation(fields: [createdById], references: [id], name: "logCreatedBy", onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum LogType {
+  org_create
+  org_update
+  member_create
+  member_update
+  member_delete
+  invitation_declined
+  invitation_accept
+  message_create
+}

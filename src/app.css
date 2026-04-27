@@ -1,0 +1,44 @@
+@source '../node_modules/fuma/dist/ui';
+@import 'tailwindcss';
+@plugin '@tailwindcss/typography';
+@plugin "daisyui" {
+	logs: false;
+	themes:
+		light --default,
+		forest --prefersdark;
+}
+
+@layer components {
+	.menu-item {
+		@apply flex cursor-pointer items-center gap-3 text-ellipsis whitespace-nowrap rounded-md px-3 py-[5px] hover:bg-base-200;
+	}
+	.menu-item.active {
+		@apply bg-base-300/80;
+	}
+	.menu-item.disabled {
+		@apply bg-base-200/50 hover:bg-base-200/50 cursor-default;
+	}
+
+	.title {
+		@apply text-base-content/70 text-xl font-semibold;
+	}
+
+	.title-sm {
+		@apply text-base-content/60 text-xs font-bold;
+	}
+
+	.title-md {
+		@apply text-base-content/60 font-semibold;
+	}
+
+	.btn-primary {
+		@apply fill-white/90 text-white;
+	}
+
+	.suggestion {
+		@apply whitespace-nowrap! mx-1 inline-block rounded border px-2 text-sm shadow;
+	}
+	.border-input {
+		border-color: color-mix(in oklab, var(--color-base-content) 20%, #0000);
+	}
+}
