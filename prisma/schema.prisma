@@ -62,6 +62,11 @@ model Contact {
 
   logs    Log[]
   members Member[]
+
+  // Domaine compteur connecté
+  contracts     Contract[]
+  billingPoints BillingPoint[]
+  invoices      Invoice[]
 }
 
 enum ContactGender {
@@ -106,6 +111,14 @@ model Org {
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   sessions  Session[]
+
+  // Domaine compteur connecté
+  sites         Site[]
+  meters        Meter[]
+  tariffs       Tariff[]
+  contracts     Contract[]
+  billingPoints BillingPoint[]
+  invoices      Invoice[]
 }
 
 model Log {
@@ -138,4 +151,240 @@ enum LogType {
   invitation_declined
   invitation_accept
   message_create
+
+  // Domaine : Compteurs connectés
+}
+
+// ============================================================================
+// Domaine : Compteurs Connectés
+// ============================================================================
+
+model Site {
+  id      Int     @id @default(autoincrement())
+  orgId   Int
+  org     Org     @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  name    String
+  address String?
+  city    String?
+  zipCode String?
+
+  locations Location[]
+  meters    Meter[]
+  contracts Contract[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Location {
+  id          Int     @id @default(autoincrement())
+  siteId      Int
+  site        Site    @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  name        String
+  description String?
+
+  meters        Meter[]
+  billingPoints BillingPoint[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Meter {
+  id           Int         @id @default(autoincrement())
+  orgId        Int
+  org          Org         @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  siteId       Int?
+  site         Site?       @relation(fields: [siteId], references: [id], onDelete: SetNull)
+  locationId   Int?
+  location     Location?   @relation(fields: [locationId], references: [id], onDelete: SetNull)
+  serialNumber String      @unique
+  model        String?
+  simNumber    String?
+  status       MeterStatus @default(offline)
+  type         MeterType
+
+  consumptions  Consumption[]
+  billingPoints BillingPoint[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum MeterStatus {
+  online
+  offline
+  maintenance
+}
+
+enum MeterType {
+  electricity
+  hot_water
+  cold_water
+  heating
+  gas
+}
+
+model Consumption {
+  id           Int      @id @default(autoincrement())
+  meterId      Int
+  meter        Meter    @relation(fields: [meterId], references: [id], onDelete: Cascade)
+  timestamp    DateTime
+  indexValue   Decimal  @db.Decimal(18, 6)
+  instantPower Decimal? @db.Decimal(18, 6)
+  voltage      Decimal? @db.Decimal(18, 6)
+  current      Decimal? @db.Decimal(18, 6)
+  alertStatus  String?
+
+  createdAt DateTime @default(now())
+
+  @@index([meterId, timestamp])
+}
+
+model Tariff {
+  id                Int        @id @default(autoincrement())
+  orgId             Int
+  org               Org        @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  name              String
+  type              TariffType
+  baseAmount        Decimal?   @db.Decimal(18, 2) // Montant fixe de base / mise en service
+  annualPlatformFee Decimal?   @db.Decimal(18, 2) // Montant annuel accès plateforme
+  unitPrice         Decimal?   @db.Decimal(18, 6) // Prix par kWh / unité
+  currency          String     @default("CHF")
+  activeFrom        DateTime
+  activeUntil       DateTime?
+
+  tiers     TariffTier[]
+  contracts Contract[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum TariffType {
+  flat_rate
+  tiered
+  subscription_plus_usage
+  custom
+}
+
+model TariffTier {
+  id             Int     @id @default(autoincrement())
+  tariffId       Int
+  tariff         Tariff  @relation(fields: [tariffId], references: [id], onDelete: Cascade)
+  minConsumption Decimal @db.Decimal(18, 6)
+  maxConsumption Decimal @db.Decimal(18, 6)
+  unitPrice      Decimal @db.Decimal(18, 6)
+
+  createdAt DateTime @default(now())
+}
+
+model Contract {
+  id              Int            @id @default(autoincrement())
+  orgId           Int
+  org             Org            @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  clientContactId Int
+  clientContact   Contact        @relation(fields: [clientContactId], references: [id], onDelete: Cascade)
+  tariffId        Int
+  tariff          Tariff         @relation(fields: [tariffId], references: [id], onDelete: Restrict)
+  siteId          Int?
+  site            Site?          @relation(fields: [siteId], references: [id], onDelete: SetNull)
+  startDate       DateTime
+  endDate         DateTime?
+  status          ContractStatus @default(active)
+
+  billingPoints BillingPoint[]
+  invoices      Invoice[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum ContractStatus {
+  active
+  terminated
+  pending
+}
+
+model BillingPoint {
+  id         Int       @id @default(autoincrement())
+  orgId      Int
+  org        Org       @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  contactId  Int
+  contact    Contact   @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  locationId Int
+  location   Location  @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  meterId    Int
+  meter      Meter     @relation(fields: [meterId], references: [id], onDelete: Cascade)
+  contractId Int?
+  contract   Contract? @relation(fields: [contractId], references: [id], onDelete: SetNull)
+  label      String?
+
+  invoices Invoice[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Invoice {
+  id             Int           @id @default(autoincrement())
+  orgId          Int
+  org            Org           @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  billingPointId Int?
+  billingPoint   BillingPoint? @relation(fields: [billingPointId], references: [id], onDelete: SetNull)
+  contactId      Int
+  contact        Contact       @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  contractId     Int?
+  contract       Contract?     @relation(fields: [contractId], references: [id], onDelete: SetNull)
+  periodStart    DateTime
+  periodEnd      DateTime
+  totalAmount    Decimal       @db.Decimal(18, 2)
+  status         InvoiceStatus @default(draft)
+  pdfUrl         String?
+
+  lines    InvoiceLine[]
+  payments InvoicePayment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum InvoiceStatus {
+  draft
+  sent
+  paid
+  overdue
+  cancelled
+}
+
+model InvoiceLine {
+  id          Int     @id @default(autoincrement())
+  invoiceId   Int
+  invoice     Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  description String
+  quantity    Decimal @db.Decimal(18, 6)
+  unitPrice   Decimal @db.Decimal(18, 6)
+  total       Decimal @db.Decimal(18, 2)
+
+  createdAt DateTime @default(now())
+}
+
+model InvoicePayment {
+  id             Int           @id @default(autoincrement())
+  invoiceId      Int
+  invoice        Invoice       @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  amount         Decimal       @db.Decimal(18, 2)
+  method         String?
+  status         PaymentStatus @default(pending)
+  paidAt         DateTime?
+  transactionRef String?
+
+  createdAt DateTime @default(now())
+}
+
+enum PaymentStatus {
+  pending
+  completed
+  failed
+  refunded
 }
