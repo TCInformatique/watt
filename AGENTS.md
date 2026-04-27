@@ -15,7 +15,7 @@
 - **Language:** TypeScript v5 (strict mode enabled)
 - **Bundler:** Vite v7
 - **Runtime:** Node.js / Bun (Dockerfile uses Bun;
-- **Database:** PostgreSQL, accessed via [Prisma](https://www.prisma.io/) ORM v7.8 with `@prisma/adapter-pg`
+- **Database:** PostgreSQL with **TimescaleDB** extension (for time-series consumption data), accessed via [Prisma](https://www.prisma.io/) ORM v7.8 with `@prisma/adapter-pg`
 - **Validation:** [Zod](https://zod.dev/) v4
 - **UI Helpers:** [Fuma](https://github.com/peufo/fuma) (form actions, pagination, query parsing)
 - **Auth:** Custom session-based auth using `@oslojs/crypto` (SHA-256 tokens) and `@node-rs/argon2` (password hashing)
@@ -73,7 +73,13 @@ src/
 prisma/
 ├── schema.prisma           # Full DB schema (Auth + Org + Connected Meters + Billing)
 ├── seed.ts                 # Demo data seed (includes French test data)
+├── prisma.config.ts        # Prisma configuration (schema, migrations, seed, datasource)
 └── migrations/             # Prisma migration files
+
+doc/
+├── db-schema.md            # Mermaid ER diagram of the full database schema
+├── specs.md                # Functional specifications (views, features, business rules)
+└── ROADMAP.md              # Implementation roadmap with time estimates
 ```
 
 ---
@@ -95,12 +101,15 @@ The Prisma schema covers four domains:
 
 4. **Connected Meters & Billing** — `Site`, `Location`, `Meter`, `Consumption`, `Tariff`, `TariffTier`, `Contract`, `BillingPoint`, `Invoice`, `InvoiceLine`, `InvoicePayment`
    - Meters track consumption readings over time.
+   - `Consumption` is stored as a **TimescaleDB hypertable** partitioned by `timestamp`, with a composite primary key `@@id([id, timestamp])`.
+   - The `Consumption.data` column is a typed JSON field (`JsonConsumptionData`) to remain flexible across meter types (electricity, water, heating, gas).
    - Tariffs support flat-rate, tiered, and subscription-plus-usage models.
    - Contracts link clients to tariffs and sites.
    - Billing points bind a meter + location + contract + contact.
    - Invoices have lines and payment records.
 
 See `doc/db-schema.md` for a complete Mermaid ER diagram (in French).
+See `doc/specs.md` for functional specifications and `doc/ROADMAP.md` for the implementation plan.
 
 ---
 
@@ -120,7 +129,7 @@ See `doc/db-schema.md` for a complete Mermaid ER diagram (in French).
 | `bun run generate`       | Regenerate Prisma Client                                                             |
 | `bun run seed`           | Run `prisma/seed.ts` (creates root user + demo data)                                 |
 | `bun run studio`         | Open Prisma Studio                                                                   |
-| `./dev-postrges.sh`      | Start a local PostgreSQL Docker container for development                            |
+| `./dev-postrges.sh`      | Start a local **TimescaleDB** Docker container for development                       |
 
 > **Note:** There is currently **no automated test suite** in the project. The `lint` script is the primary automated quality gate.
 
@@ -210,9 +219,43 @@ Copy `.env.example` to `.env` and configure:
 
 ---
 
+## TimescaleDB / Hypertable Notes
+
+- The `Consumption` table is a TimescaleDB hypertable. The migration SQL includes:
+  ```sql
+  CREATE EXTENSION IF NOT EXISTS timescaledb;
+  SELECT create_hypertable('consumption', 'timestamp', create_default_indexes => false);
+  ```
+- Because Prisma manages the `timestamp` index via `@@index([timestamp])`, `create_default_indexes => false` is used to prevent TimescaleDB from creating a duplicate index.
+- If you modify `Consumption` in the future, always use `prisma migrate dev --create-only` and review the generated SQL for hypertable compatibility.
+
+---
+
+## Session History (2026-04-27)
+
+This session established the **Connected Meters** domain on top of the existing auth/org foundation:
+
+- **Analysed** the project requirements document (cahier des charges) for a connected utility-meter SaaS.
+- **Created** `README.md` at project root.
+- **Extended** `prisma/schema.prisma` with new models:
+  - `Site`, `Location`, `Meter` (with `modbusUnitId` for Modbus protocol)
+  - `Consumption` (TimescaleDB hypertable, JSON `data` column)
+  - `Tariff`, `TariffTier`, `Contract`, `BillingPoint`
+  - `Invoice`, `InvoiceLine`, `InvoicePayment`
+- **Integrated TimescaleDB**: `@@id([id, timestamp])`, `@@map("consumption")`, `create_default_indexes => false`.
+- **Updated** `dev-postrges.sh` to use `timescale/timescaledb:latest-pg17`.
+- **Updated** `prisma.config.ts` with seed configuration.
+- **Updated** `prisma/seed.ts` to use `PrismaPg` adapter and generate demo data with Faker.
+- **Added** `JsonConsumptionData` type in `src/app.d.ts`.
+- **Created** `doc/db-schema.md` — Mermaid ER diagram.
+- **Created** `doc/specs.md` — functional specifications (Org + Client portal, Modbus ingestion, billing).
+- **Created** `doc/ROADMAP.md` — phased roadmap with ~49-day MVP estimate.
+
+---
+
 ## Quick Start for Agents
 
-1. Ensure PostgreSQL is running (use `./dev-postrges.sh` or your own instance).
+1. Ensure **TimescaleDB** is running (use `./dev-postrges.sh` or your own instance).
 2. Copy `.env.example` → `.env` and set `DATABASE_URL`.
 3. Install dependencies: `bun install`
 4. Run migrations: `bun run migrate`
