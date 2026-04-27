@@ -209,28 +209,3 @@
 | 6     | Alertes en temps réel                                 | Tests de seuils et notifications      | Post-MVP   |
 
 ---
-
-## Planning indicatif
-
-```
-Semaine  1 : ████████ Phase 0 — Fondations
-Semaine  2 : ████████ Phase 1 — Gestion du parc (partie 1)
-Semaine  3 : ████████ Phase 1 — Gestion du parc (partie 2)
-Semaine  4 : ████████ Phase 2 — Ingestion + Dashboard Org
-Semaine  5 : ████████ Phase 2 — Dashboard Client + Export
-Semaine  6 : ████████ Phase 3 — Tarifs + Contrats
-Semaine  7 : ████████ Phase 3 — Génération factures + PDF
-Semaine  8 : ████████ Phase 3 — Tests + ajustements
-Semaine  9 : ████████ Phase 4 — Paiements + Export comptable
-Semaine 10 : ████████ Phase 5 — Paramétrages + polish
-```
-
----
-
-## Notes
-
-- Chaque phase doit pouvoir être déployée en production (pas de "big bang").
-- Privilégier les quick-wins de la Phase 2 pour montrer de la valeur rapidement aux clients.
-- La partie **Facturation** (Phase 3) est le cœur métier : elle doit être testée finement (arrondis, paliers, dates de changement de tarif).
-- Les estimations supposent un développeur solo à temps plein sur le projet. En parallèle avec d'autres missions, compter le double de temps calendaire.
-- Les phases 0 et 1 peuvent être légèrement chevauchées si le schéma Prisma est déjà stabilisé.
