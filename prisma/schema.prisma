@@ -44,10 +44,6 @@ model Contact {
 
   user User?
 
-  // TODO: CONTACT PERMISSIONS SYSTEM
-  // orgId Int
-  // org Org @relation(fields: [orgId], references: [id])
-
   firstName        String
   lastName         String
   email            String?
@@ -66,9 +62,6 @@ model Contact {
 
   logs    Log[]
   members Member[]
-
-  // TODO: this is important... I think
-  //@@unique([email, orgId])
 }
 
 enum ContactGender {
@@ -88,8 +81,8 @@ model Member {
 
   role MemberRole
 
-  logsRelated Log[]       @relation(name: "logMember")
-  logsCreated Log[]       @relation(name: "logCreatedBy")
+  logsRelated Log[] @relation(name: "logMember")
+  logsCreated Log[] @relation(name: "logCreatedBy")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -107,14 +100,13 @@ model Org {
   id   Int    @id @default(autoincrement())
   name String @unique
 
-  members             Member[]
-  logs                Log[]        @relation(name: "logOrg")
+  members Member[]
+  logs    Log[]    @relation(name: "logOrg")
 
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   sessions  Session[]
 }
-
 
 model Log {
   id Int @id @default(autoincrement())
@@ -123,15 +115,15 @@ model Log {
   /// [JsonLogData]
   data Json
 
-  orgId       Int
-  org         Org        @relation(fields: [orgId], references: [id], name: "logOrg")
-  contactId   Int?
-  contact     Contact?   @relation(fields: [contactId], references: [id])
-  memberId    Int?
-  member      Member?    @relation(fields: [memberId], references: [id], name: "logMember", onDelete: SetNull)
+  orgId     Int
+  org       Org      @relation(fields: [orgId], references: [id], name: "logOrg")
+  contactId Int?
+  contact   Contact? @relation(fields: [contactId], references: [id])
+  memberId  Int?
+  member    Member?  @relation(fields: [memberId], references: [id], name: "logMember", onDelete: SetNull)
 
   createdById Int?
-  createdBy   Member?    @relation(fields: [createdById], references: [id], name: "logCreatedBy", onDelete: SetNull)
+  createdBy   Member? @relation(fields: [createdById], references: [id], name: "logCreatedBy", onDelete: SetNull)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
